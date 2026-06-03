@@ -110,7 +110,7 @@ namespace mate22
 			};
 		}
 
-		// === CENTRO: GENERAR OPERACIÓN MATEMÁTICA ===
+		//  GENERAR OPERACIÓN MATEMÁTICA 
 			private void GenerarEjercicio()
 			{
 				if (!nivelTiempos.ContainsKey(nivelActual) || nivelAciertos.ContainsKey(nivelActual) == false)
@@ -475,7 +475,7 @@ namespace mate22
 			lblContador.Text = $"{aciertos}/10";
 		}
 
-		// === BOTÓN CONTINUAR AL SIGUIENTE NIVEL ===
+		//  BOTÓN CONTINUAR AL SIGUIENTE NIVEL 
 		private void BtnContinuar_Click(object sender, EventArgs e)
 		{
 			btnContinuar.Visible = false;
@@ -490,7 +490,7 @@ namespace mate22
 			}
 		}
 
-		// === BOTÓN CERRAR SESIÓN ===
+		//  BOTÓN CERRAR SESIÓN 
 		private void BtnLogout_Click(object sender, EventArgs e)
 		{
 			int errores = 10 - aciertos;
