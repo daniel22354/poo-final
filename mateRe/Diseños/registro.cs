@@ -1,0 +1,127 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Text;
+using System.Windows.Forms;
+using System.IO;
+using OfficeOpenXml;
+
+namespace mate22
+{
+	public partial class registro : Form
+	{
+		// === CONSTRUCTOR ===
+		public registro()
+		{
+			InitializeComponent();
+		}
+
+		// === REGISTRAR NUEVO USUARIO ===
+		private void BtnRegister_Click(object sender, EventArgs e)
+		{
+			string username = textUser.Text.Trim();
+			string password = textPass.Text;
+			if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+			{
+				MessageBox.Show("Usuario y contraseña requeridos.");
+				return;
+			}
+			var existing = UserStore.GetUser(username);
+			if (existing != null)
+			{
+				MessageBox.Show("El usuario ya existe.");
+				return;
+			}
+			var user = new UserData { Username = username, PasswordHash = UserStore.HashPassword(password), NivelMaximo = 1, AciertosTotales = 0, ErroresTotales = 0, Score = 100 };
+			UserStore.AddOrUpdateUser(user);
+			try
+			{
+				string docPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "mate22");
+				if (!Directory.Exists(docPath)) Directory.CreateDirectory(docPath);
+				string excelFile = Path.Combine(docPath, "usuarios.xlsx");
+
+				EPPlusHelper.EnsureFileExists(excelFile, "Usuarios", new[] { "Usuario", "PasswordHash", "Nivel", "Score" });
+
+				var rowData = new Dictionary<string, object>
+				{
+					{ "Usuario", user.Username },
+					{ "PasswordHash", user.PasswordHash },
+					{ "Nivel", user.NivelMaximo },
+					{ "Score", user.Score }
+				};
+
+				EPPlusHelper.AppendRow(excelFile, "Usuarios", rowData);
+			}
+			catch (Exception ex) { MessageBox.Show("Advertencia: no se pudo actualizar archivo Excel: " + ex.Message, "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+
+			try { MessageBox.Show("Cuenta creada. Usuarios guardados en: " + UserStore.GetStoragePath(), "Registro", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch { MessageBox.Show("Cuenta creada.", "Registro", MessageBoxButtons.OK, MessageBoxIcon.Information); }
+
+			this.Hide();
+			Form1 f = new Form1();
+			f.CurrentUsername = username;
+			f.nivelMaximoDesbloqueado = user.NivelMaximo;
+			f.CargarProgreso();
+			f.ShowDialog();
+			this.Close();
+		}
+
+		// === LOGIN USUARIO EXISTENTE ===
+		private void BtnLogin_Click(object sender, EventArgs e)
+		{
+			string username = textUser.Text.Trim();
+			string password = textPass.Text;
+			if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+			{
+				MessageBox.Show("Usuario y contraseña requeridos.");
+				return;
+			}
+			var user = UserStore.GetUser(username);
+			if (user == null)
+			{
+				MessageBox.Show("Usuario no encontrado.");
+				return;
+			}
+			string hash = UserStore.HashPassword(password);
+			if (hash != user.PasswordHash)
+			{
+				MessageBox.Show("Contraseña incorrecta.");
+				return;
+			}
+
+			this.Hide();
+			Form1 f = new Form1();
+			f.nivelMaximoDesbloqueado = user.NivelMaximo;
+			f.CargarProgreso();
+			f.ShowDialog();
+			this.Close();
+		}
+
+		private void registro_Load(object sender, EventArgs e) { }
+
+		// === ADMIN PANEL: HISTORIAL Y LISTA DE USUARIOS ===
+		private void btnHistorial_Click(object sender, EventArgs e)
+		{
+			string usuarioAdmin = "profesor";
+			string contrasenaAdmin = "123456";
+
+			string usuarioIngresado = textUser.Text?.Trim() ?? string.Empty;
+			string contrasenaIngresada = textPass.Text ?? string.Empty;
+
+			if (!string.Equals(usuarioIngresado, usuarioAdmin, StringComparison.OrdinalIgnoreCase) ||
+				contrasenaIngresada != contrasenaAdmin)
+			{
+				MessageBox.Show("Campos no válidos.", "Acceso Denegado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				return;
+			}
+
+			FormHistorial historial = new FormHistorial(true);
+			historial.ShowDialog();
+		}
+
+		private void registro_Load_1(object sender, EventArgs e) { }
+		private void label3_Click(object sender, EventArgs e) { }
+		private void textUser_TextChanged(object sender, EventArgs e) { }
+	}
+}

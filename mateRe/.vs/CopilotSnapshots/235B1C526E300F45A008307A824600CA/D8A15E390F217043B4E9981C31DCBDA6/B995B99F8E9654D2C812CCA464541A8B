@@ -1,0 +1,32 @@
+﻿using System;
+using System.Windows.Forms;
+using OfficeOpenXml;
+
+namespace mate22
+{
+	internal static class Program
+	{
+		[STAThread]
+		static void Main()
+		{
+			ApplicationConfiguration.Initialize();
+			EPPlusHelper.Initialize();
+			Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+			Application.ThreadException += (s, e) => ShowExceptionAndExit(e.Exception, "Error en hilo de interfaz");
+			AppDomain.CurrentDomain.UnhandledException += (s, e) => {
+				Exception ex = e.ExceptionObject as Exception ?? new Exception("Excepción no gestionada");
+				ShowExceptionAndExit(ex, "Excepción no gestionada");
+			};
+
+			try { Application.Run(new registro()); }
+			catch (Exception ex) { ShowExceptionAndExit(ex, "Error al iniciar la aplicación"); }
+		}
+
+		private static void ShowExceptionAndExit(Exception ex, string title)
+		{
+			try { MessageBox.Show(title + "\n\n" + ex.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+			catch { }
+			Environment.Exit(1);
+		}
+	}
+}

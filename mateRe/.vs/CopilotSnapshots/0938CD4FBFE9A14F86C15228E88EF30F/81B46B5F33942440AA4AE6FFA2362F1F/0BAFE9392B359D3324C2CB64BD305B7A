@@ -1,0 +1,42 @@
+﻿using System;
+
+namespace mate22
+{
+	/// <summary>
+	/// Excepción personalizada para errores relacionados con resultados
+	/// Demuestra uso de excepciones personalizadas en POO
+	/// </summary>
+	public class ResultadoException : Exception
+	{
+		public ResultadoException() : base("Error al procesar resultado")
+		{
+		}
+
+		public ResultadoException(string mensaje) : base(mensaje)
+		{
+		}
+
+		public ResultadoException(string mensaje, Exception innerException) 
+			: base(mensaje, innerException)
+		{
+		}
+
+		/// <summary>
+		/// Propiedad para código de error específico
+		/// </summary>
+		public ErrorCode CodigoError { get; set; }
+	}
+
+	/// <summary>
+	/// Enumeración para códigos de error específicos
+	/// </summary>
+	public enum ErrorCode
+	{
+		ArchivoNoEncontrado = 1,
+		ArchivoNoValido = 2,
+		ResultadoInvalido = 3,
+		ErrorGuardando = 4,
+		ErrorLeyendo = 5,
+		UsuarioNoValido = 6
+	}
+}

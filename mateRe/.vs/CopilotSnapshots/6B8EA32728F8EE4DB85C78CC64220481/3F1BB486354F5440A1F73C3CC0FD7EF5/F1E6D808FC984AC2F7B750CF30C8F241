@@ -1,0 +1,13 @@
+﻿namespace mateRe.Properties
+{
+	using System.Drawing;
+
+	// Compat wrapper so designer code referencing mateRe.Properties.Resources compiles.
+	internal static class Resources
+	{
+		internal static Bitmap Gemini_Generated_Image_eqiic2eqiic2eqii => FastMind.Properties.Resources.Gemini_Generated_Image_eqiic2eqiic2eqii;
+		internal static Bitmap Gemini_Generated_Image_h4t6x1h4t6x1h4t6 => FastMind.Properties.Resources.Gemini_Generated_Image_h4t6x1h4t6x1h4t6;
+		internal static Bitmap Gemini_Generated_Image_jqfchrjqfchrjqfc => FastMind.Properties.Resources.Gemini_Generated_Image_jqfchrjqfchrjqfc;
+		internal static Bitmap Gemini_Generated_Image_v2878wv2878wv287 => FastMind.Properties.Resources.Gemini_Generated_Image_v2878wv2878wv287;
+	}
+}

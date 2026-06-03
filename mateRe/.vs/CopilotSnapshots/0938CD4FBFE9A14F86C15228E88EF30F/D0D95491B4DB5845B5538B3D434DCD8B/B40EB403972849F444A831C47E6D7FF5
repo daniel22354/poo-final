@@ -1,0 +1,39 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text.Json;
+
+namespace mate22
+{
+	public static class GestorResultados
+	{
+		private static string archivo = "historial.json";
+
+		public static void Guardar(Resultado resultado)
+		{
+			List<Resultado> resultados = ObtenerTodos();
+
+			resultados.Add(resultado);
+
+			string json = JsonSerializer.Serialize(
+			resultados,
+			new JsonSerializerOptions
+			{
+				WriteIndented = true
+			});
+
+			File.WriteAllText(archivo, json);
+		}
+
+		public static List<Resultado> ObtenerTodos()
+		{
+			if (!File.Exists(archivo))
+				return new List<Resultado>();
+
+			string json = File.ReadAllText(archivo);
+
+			return JsonSerializer.Deserialize<List<Resultado>>(json)
+			?? new List<Resultado>();
+		}
+	}
+}

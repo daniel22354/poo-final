@@ -1,0 +1,50 @@
+﻿namespace mate22
+{
+	partial class FormHistorial
+	{
+		private System.ComponentModel.IContainer components = null;
+		private System.Windows.Forms.DataGridView dgvHistorial;
+
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing && (components != null))
+			{
+				components.Dispose();
+			}
+			base.Dispose(disposing);
+		}
+
+		private void InitializeComponent()
+		{
+			this.dgvHistorial = new System.Windows.Forms.DataGridView();
+			((System.ComponentModel.ISupportInitialize)(this.dgvHistorial)).BeginInit();
+			this.SuspendLayout();
+			// 
+			// dgvHistorial
+			// 
+			this.dgvHistorial.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+			| System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
+			this.dgvHistorial.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+			this.dgvHistorial.Location = new System.Drawing.Point(12, 12);
+			this.dgvHistorial.Name = "dgvHistorial";
+			this.dgvHistorial.RowHeadersWidth = 51;
+			this.dgvHistorial.RowTemplate.Height = 29;
+			this.dgvHistorial.Size = new System.Drawing.Size(760, 537);
+			this.dgvHistorial.TabIndex = 0;
+			// 
+			// FormHistorial
+			// 
+			this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
+			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+			this.ClientSize = new System.Drawing.Size(784, 561);
+			this.Controls.Add(this.dgvHistorial);
+			this.Name = "FormHistorial";
+			this.Text = "Historial";
+			this.Load += new System.EventHandler(this.FormHistorial_Load);
+			((System.ComponentModel.ISupportInitialize)(this.dgvHistorial)).EndInit();
+			this.ResumeLayout(false);
+
+		}
+	}
+}

@@ -1,0 +1,26 @@
+﻿namespace mate22
+{
+	internal static class Program
+	{
+		/// <summary>
+		///  The main entry point for the application.
+		/// </summary>
+		[STAThread]
+		static void Main()
+		{
+			// To customize application configuration such as set high DPI settings or default font,
+			// see https://aka.ms/applicationconfiguration.
+			ApplicationConfiguration.Initialize();
+			// Mostrar primero el formulario de login en Excel si está disponible, si no usar registro CSV
+			try
+			{
+				// Si EPPlus está disponible preferimos FormLoginExcel
+				Application.Run(new FormLoginExcel());
+			}
+			catch
+			{
+				Application.Run(new registro());
+			}
+		}
+	}
+}

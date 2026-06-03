@@ -1,0 +1,40 @@
+﻿namespace mate22
+{
+	partial class FormHistorial
+	{
+		private System.ComponentModel.IContainer components = null;
+		private System.Windows.Forms.DataGridView dgvHistorial;
+
+		private void InitializeComponent()
+		{
+			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FormHistorial));
+			dgvHistorial = new DataGridView();
+			((System.ComponentModel.ISupportInitialize)dgvHistorial).BeginInit();
+			SuspendLayout();
+			// 
+			// dgvHistorial
+			// 
+			dgvHistorial.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+			dgvHistorial.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+			dgvHistorial.Location = new Point(12, 12);
+			dgvHistorial.Name = "dgvHistorial";
+			dgvHistorial.RowHeadersWidth = 51;
+			dgvHistorial.Size = new Size(760, 537);
+			dgvHistorial.TabIndex = 0;
+			// 
+			// FormHistorial
+			// 
+			AutoScaleDimensions = new SizeF(8F, 20F);
+			AutoScaleMode = AutoScaleMode.Font;
+			ClientSize = new Size(784, 561);
+			Controls.Add(dgvHistorial);
+			Icon = (Icon)resources.GetObject("$this.Icon");
+			Name = "FormHistorial";
+			Text = "Historial";
+			Load += FormHistorial_Load;
+			((System.ComponentModel.ISupportInitialize)dgvHistorial).EndInit();
+			ResumeLayout(false);
+
+		}
+	}
+}

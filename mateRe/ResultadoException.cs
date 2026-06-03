@@ -1,0 +1,38 @@
+using System;
+
+namespace mate22
+{
+	// ============================================
+	// EXCEPCIÓN PERSONALIZADA
+	// ============================================
+	public class ResultadoException : Exception
+	{
+		public ResultadoException() : base("Error al procesar resultado")
+		{
+		}
+
+		public ResultadoException(string mensaje) : base(mensaje)
+		{
+		}
+
+		public ResultadoException(string mensaje, Exception innerException) 
+			: base(mensaje, innerException)
+		{
+		}
+
+		public ErrorCode CodigoError { get; set; }
+	}
+
+	// ============================================
+	// CÓDIGOS DE ERROR
+	// ============================================
+	public enum ErrorCode
+	{
+		ArchivoNoEncontrado = 1,
+		ArchivoNoValido = 2,
+		ResultadoInvalido = 3,
+		ErrorGuardando = 4,
+		ErrorLeyendo = 5,
+		UsuarioNoValido = 6
+	}
+}

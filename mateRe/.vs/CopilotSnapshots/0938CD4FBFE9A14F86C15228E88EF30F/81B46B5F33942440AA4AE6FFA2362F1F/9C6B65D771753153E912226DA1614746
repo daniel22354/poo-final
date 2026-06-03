@@ -1,0 +1,52 @@
+﻿using System;
+using System.Collections.Generic;
+
+namespace mate22
+{
+	/// <summary>
+	/// Interfaz que define el contrato para gestores de resultados
+	/// Demuestra herencia de interfaces en POO
+	/// </summary>
+	public interface IResultadoGestor : IDisposable
+	{
+		/// <summary>
+		/// Guarda un resultado en la fuente de datos
+		/// </summary>
+		void Guardar(Resultado resultado);
+
+		/// <summary>
+		/// Obtiene todos los resultados
+		/// </summary>
+		List<Resultado> ObtenerTodos();
+
+		/// <summary>
+		/// Obtiene resultados filtrados por usuario
+		/// </summary>
+		List<Resultado> ObtenerPorUsuario(string usuario);
+
+		/// <summary>
+		/// Obtiene resultados de una fecha específica
+		/// </summary>
+		List<Resultado> ObtenerPorFecha(DateTime fecha);
+
+		/// <summary>
+		/// Obtiene resultados dentro de un rango de fechas
+		/// </summary>
+		List<Resultado> ObtenerPorRangoFechas(DateTime fechaInicio, DateTime fechaFin);
+
+		/// <summary>
+		/// Obtiene el promedio de scores para un usuario
+		/// </summary>
+		double ObtenerPromedioScores(string usuario);
+
+		/// <summary>
+		/// Elimina resultados de un usuario
+		/// </summary>
+		void EliminarPorUsuario(string usuario);
+
+		/// <summary>
+		/// Obtiene estadísticas generales
+		/// </summary>
+		Dictionary<string, object> ObtenerEstadisticas();
+	}
+}

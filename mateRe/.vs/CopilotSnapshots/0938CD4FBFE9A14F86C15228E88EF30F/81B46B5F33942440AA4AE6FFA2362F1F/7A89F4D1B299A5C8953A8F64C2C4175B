@@ -1,0 +1,217 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Windows.Forms;
+using System.Linq;
+
+namespace mate22
+{
+	/// <summary>
+	/// Formulario que muestra el historial de resultados con gráficos y estadísticas
+	/// Demuestra uso de interfaces (IResultadoGestor), manejo de excepciones y gráficos
+	/// </summary>
+	public partial class FormHistorial : Form
+	{
+		private IResultadoGestor gestor;
+
+		public FormHistorial()
+		{
+			InitializeComponent();
+			ConfigurarEstilos();
+		}
+
+		private void FormHistorial_Load(object sender, EventArgs e)
+		{
+			try
+			{
+				// Usar la interfaz IResultadoGestor
+				gestor = new GestorResultados();
+
+				// Cargar datos en el DataGridView
+				CargarHistorial();
+
+				// Mostrar estadísticas
+				MostrarEstadisticas();
+			}
+			catch (ResultadoException ex)
+			{
+				MessageBox.Show($"Error: {ex.Message} (Código: {ex.CodigoError})", "Error de Resultado", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show($"Error inesperado: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
+		private void CargarHistorial()
+		{
+			try
+			{
+				var resultados = gestor.ObtenerTodos();
+
+				// Ordenar por score promedio descendente usando IComparable
+				resultados.Sort();
+
+				dgvHistorial.DataSource = null;
+				dgvHistorial.DataSource = resultados;
+
+				// Personalizar columnas
+				PersonalizarColumnas();
+
+				// Aplicar formato condicional
+				AplicarFormatoCondicional();
+			}
+			catch (ResultadoException ex)
+			{
+				MessageBox.Show($"Error al cargar historial: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
+		private void PersonalizarColumnas()
+		{
+			try
+			{
+				// Ocultar columna TiempoTotal si existe
+				if (dgvHistorial.Columns.Contains("TiempoTotal"))
+					dgvHistorial.Columns["TiempoTotal"].Visible = true;
+
+				// Ajustar ancho de columnas
+				dgvHistorial.Columns["Nombre"].Width = 120;
+				dgvHistorial.Columns["Fecha"].Width = 150;
+				dgvHistorial.Columns["ScoreNivel1"].Width = 80;
+				dgvHistorial.Columns["ScoreNivel2"].Width = 80;
+				dgvHistorial.Columns["ScoreNivel3"].Width = 80;
+				dgvHistorial.Columns["ScoreNivel4"].Width = 80;
+				dgvHistorial.Columns["TiempoTotal"].Width = 100;
+
+				// Encabezados personalizados
+				dgvHistorial.Columns["Nombre"].HeaderText = "Usuario";
+				dgvHistorial.Columns["Fecha"].HeaderText = "Fecha y Hora";
+				dgvHistorial.Columns["ScoreNivel1"].HeaderText = "Nivel 1";
+				dgvHistorial.Columns["ScoreNivel2"].HeaderText = "Nivel 2";
+				dgvHistorial.Columns["ScoreNivel3"].HeaderText = "Nivel 3";
+				dgvHistorial.Columns["ScoreNivel4"].HeaderText = "Nivel 4";
+				dgvHistorial.Columns["TiempoTotal"].HeaderText = "Tiempo Total";
+
+				// Centro de contenido
+				foreach (DataGridViewColumn col in dgvHistorial.Columns)
+				{
+					if (col.Name != "Nombre" && col.Name != "Fecha")
+						col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+				}
+			}
+			catch { }
+		}
+
+		private void AplicarFormatoCondicional()
+		{
+			try
+			{
+				foreach (DataGridViewRow row in dgvHistorial.Rows)
+				{
+					// Colorear según score
+					for (int i = 2; i <= 5; i++) // Columnas de ScoreNivel1 a ScoreNivel4
+					{
+						if (int.TryParse(row.Cells[i].Value?.ToString(), out int score))
+						{
+							if (score >= 90)
+								row.Cells[i].Style.BackColor = Color.LightGreen;
+							else if (score >= 70)
+								row.Cells[i].Style.BackColor = Color.LightYellow;
+							else if (score >= 50)
+								row.Cells[i].Style.BackColor = Color.LightCoral;
+							else
+								row.Cells[i].Style.BackColor = Color.Red;
+
+							row.Cells[i].Style.ForeColor = Color.Black;
+							row.Cells[i].Style.Font = new Font(dgvHistorial.DefaultCellStyle.Font, FontStyle.Bold);
+						}
+					}
+				}
+			}
+			catch { }
+		}
+
+		private void MostrarEstadisticas()
+		{
+			try
+			{
+				var estadisticas = gestor.ObtenerEstadisticas();
+
+				string mensaje = "=== ESTADÍSTICAS GENERALES ===\n\n";
+				mensaje += $"Total de Resultados: {estadisticas["TotalResultados"]}\n";
+				mensaje += $"Usuarios Únicos: {estadisticas["UsuariosUnicos"]}\n";
+				mensaje += $"Score Promedio Sistema: {estadisticas["PromedioScoreSistema"]}\n";
+				mensaje += $"Score Máximo: {estadisticas["ScoreMaximo"]}\n";
+				mensaje += $"Último Registro: {estadisticas["FechaUltimoRegistro"]}\n";
+
+				// Crear un label para mostrar estadísticas
+				Label lblEstadisticas = new Label
+				{
+					Text = mensaje,
+					Dock = DockStyle.Bottom,
+					Height = 100,
+					BackColor = Color.LightBlue,
+					ForeColor = Color.Black,
+					Padding = new Padding(10),
+					BorderStyle = BorderStyle.FixedSingle,
+					Font = new Font("Arial", 10, FontStyle.Bold)
+				};
+
+				this.Controls.Add(lblEstadisticas);
+				this.Controls.SetChildIndex(lblEstadisticas, 0); // Enviar al fondo
+			}
+			catch (ResultadoException ex)
+			{
+				MessageBox.Show($"Error al obtener estadísticas: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
+		private void ConfigurarEstilos()
+		{
+			try
+			{
+				// Estilo del DataGridView
+				dgvHistorial.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+				dgvHistorial.AllowUserToAddRows = false;
+				dgvHistorial.AllowUserToDeleteRows = false;
+				dgvHistorial.ReadOnly = true;
+				dgvHistorial.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+				dgvHistorial.BackgroundColor = Color.White;
+				dgvHistorial.GridColor = Color.LightGray;
+				dgvHistorial.ColumnHeadersDefaultCellStyle.BackColor = Color.DodgerBlue;
+				dgvHistorial.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+				dgvHistorial.ColumnHeadersDefaultCellStyle.Font = new Font(dgvHistorial.Font, FontStyle.Bold);
+				dgvHistorial.ColumnHeadersHeight = 30;
+				dgvHistorial.RowTemplate.Height = 25;
+
+				// Estilo alterno de filas
+				dgvHistorial.AlternatingRowsDefaultCellStyle.BackColor = Color.AliceBlue;
+
+				// Hover effect
+				dgvHistorial.MouseMove += (s, e) =>
+				{
+					var hit = dgvHistorial.HitTest(e.X, e.Y);
+					if (hit.RowIndex >= 0 && hit.Type == DataGridViewHitTestType.Cell)
+					{
+						if (dgvHistorial.CurrentRow != null)
+							dgvHistorial.CurrentRow.DefaultCellStyle.BackColor = Color.LightSteelBlue;
+					}
+				};
+			}
+			catch { }
+		}
+
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				gestor?.Dispose();
+				components?.Dispose();
+			}
+			base.Dispose(disposing);
+		}
+	}
+}
+
+

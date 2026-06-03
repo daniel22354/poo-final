@@ -1,0 +1,238 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Windows.Forms;
+using System.Linq;
+
+namespace mate22
+{
+	// === FORMULARIO: HISTORIAL DE RESULTADOS / USUARIOS ===
+	public partial class FormHistorial : Form
+	{
+		private IResultadoGestor gestor;
+		private readonly bool mostrarUsuarios;
+
+		// === CONSTRUCTOR ===
+		public FormHistorial() : this(false) { }
+
+		public FormHistorial(bool mostrarUsuarios)
+		{
+			this.mostrarUsuarios = mostrarUsuarios;
+			InitializeComponent();
+			ConfigurarEstilos();
+		}
+
+		private void FormHistorial_Load(object sender, EventArgs e)
+		{
+			try
+			{
+				gestor = new GestorResultados();
+				CargarHistorial();
+				MostrarEstadisticas();
+			}
+			catch (ResultadoException ex) { MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+			catch (Exception ex) { MessageBox.Show($"Error inesperado: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+		}
+
+		private void CargarHistorial()
+		{
+			try
+			{
+				if (mostrarUsuarios)
+				{
+					var usuarios = UserStore.GetAllUsers();
+					dgvHistorial.DataSource = null;
+					dgvHistorial.DataSource = usuarios;
+					PersonalizarColumnasUsuarios();
+				}
+				else
+				{
+					var resultados = gestor.ObtenerTodos();
+					resultados.Sort();
+					dgvHistorial.DataSource = null;
+					dgvHistorial.DataSource = resultados;
+					PersonalizarColumnas();
+					AplicarFormatoCondicional();
+				}
+			}
+			catch (ResultadoException ex) { MessageBox.Show($"Error al cargar: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+		}
+
+		// === PERSONALIZAR DATAGRIDVIEW PARA RESULTADOS ===
+		private void PersonalizarColumnas()
+		{
+			try
+			{
+				if (dgvHistorial.Columns.Contains("TiempoTotal"))
+					dgvHistorial.Columns["TiempoTotal"].Visible = true;
+
+				dgvHistorial.Columns["Nombre"].Width = 120;
+				dgvHistorial.Columns["Fecha"].Width = 150;
+				dgvHistorial.Columns["ScoreNivel1"].Width = 80;
+				dgvHistorial.Columns["ScoreNivel2"].Width = 80;
+				dgvHistorial.Columns["ScoreNivel3"].Width = 80;
+				dgvHistorial.Columns["ScoreNivel4"].Width = 80;
+				dgvHistorial.Columns["TiempoTotal"].Width = 100;
+
+				dgvHistorial.Columns["Nombre"].HeaderText = "Usuario";
+				dgvHistorial.Columns["Fecha"].HeaderText = "Fecha y Hora";
+				dgvHistorial.Columns["ScoreNivel1"].HeaderText = "Nivel 1";
+				dgvHistorial.Columns["ScoreNivel2"].HeaderText = "Nivel 2";
+				dgvHistorial.Columns["ScoreNivel3"].HeaderText = "Nivel 3";
+				dgvHistorial.Columns["ScoreNivel4"].HeaderText = "Nivel 4";
+				dgvHistorial.Columns["TiempoTotal"].HeaderText = "Tiempo Total";
+
+				foreach (DataGridViewColumn col in dgvHistorial.Columns)
+				{
+					if (col.Name != "Nombre" && col.Name != "Fecha")
+						col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+				}
+			}
+			catch { }
+		}
+
+		// ============================================
+		// PERSONALIZACIÓN DEL DATAGRIDVIEW PARA USUARIOS
+		// ============================================
+		private void PersonalizarColumnasUsuarios()
+		{
+			try
+			{
+				if (dgvHistorial.Columns.Contains("PasswordHash"))
+					dgvHistorial.Columns["PasswordHash"].Visible = false;
+
+				if (dgvHistorial.Columns.Contains("Username"))
+					dgvHistorial.Columns["Username"].HeaderText = "Usuario";
+				if (dgvHistorial.Columns.Contains("NivelMaximo"))
+					dgvHistorial.Columns["NivelMaximo"].HeaderText = "Nivel";
+				if (dgvHistorial.Columns.Contains("AciertosTotales"))
+					dgvHistorial.Columns["AciertosTotales"].HeaderText = "Aciertos";
+				if (dgvHistorial.Columns.Contains("ErroresTotales"))
+					dgvHistorial.Columns["ErroresTotales"].HeaderText = "Errores";
+				if (dgvHistorial.Columns.Contains("Score"))
+					dgvHistorial.Columns["Score"].HeaderText = "Score";
+
+				foreach (DataGridViewColumn col in dgvHistorial.Columns)
+				{
+					col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+				}
+			}
+			catch { }
+		}
+
+		// ============================================
+		// FORMATO CONDICIONAL POR SCORE
+		// ============================================
+		private void AplicarFormatoCondicional()
+		{
+			try
+			{
+				foreach (DataGridViewRow row in dgvHistorial.Rows)
+				{
+					for (int i = 2; i <= 5; i++)
+					{
+						if (int.TryParse(row.Cells[i].Value?.ToString(), out int score))
+						{
+							if (score >= 90)
+								row.Cells[i].Style.BackColor = Color.LightGreen;
+							else if (score >= 70)
+							row.Cells[i].Style.BackColor = Color.LightYellow;
+							else if (score >= 50)
+								row.Cells[i].Style.BackColor = Color.LightCoral;
+							else
+								row.Cells[i].Style.BackColor = Color.Red;
+
+							row.Cells[i].Style.ForeColor = Color.Black;
+							row.Cells[i].Style.Font = new Font(dgvHistorial.DefaultCellStyle.Font, FontStyle.Bold);
+						}
+					}
+				}
+			}
+			catch { }
+		}
+
+		// ============================================
+		// ESTADÍSTICAS GENERALES
+		// ============================================
+		private void MostrarEstadisticas()
+		{
+			try
+			{
+				var estadisticas = gestor.ObtenerEstadisticas();
+
+				string mensaje = "=== ESTADÍSTICAS GENERALES ===\n\n";
+				mensaje += $"Total de Resultados: {estadisticas["TotalResultados"]}\n";
+				mensaje += $"Usuarios Únicos: {estadisticas["UsuariosUnicos"]}\n";
+				mensaje += $"Score Promedio Sistema: {estadisticas["PromedioScoreSistema"]}\n";
+				mensaje += $"Score Máximo: {estadisticas["ScoreMaximo"]}\n";
+				mensaje += $"Último Registro: {estadisticas["FechaUltimoRegistro"]}\n";
+
+				Label lblEstadisticas = new Label
+				{
+					Text = mensaje,
+					Dock = DockStyle.Bottom,
+					Height = 100,
+					BackColor = Color.LightBlue,
+					ForeColor = Color.Black,
+					Padding = new Padding(10),
+					BorderStyle = BorderStyle.FixedSingle,
+					Font = new Font("Arial", 10, FontStyle.Bold)
+				};
+
+				this.Controls.Add(lblEstadisticas);
+				this.Controls.SetChildIndex(lblEstadisticas, 0);
+			}
+			catch (ResultadoException ex)
+			{
+				MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
+		// ============================================
+		// ESTILOS DEL DATAGRIDVIEW
+		// ============================================
+		private void ConfigurarEstilos()
+		{
+			try
+			{
+				dgvHistorial.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+				dgvHistorial.AllowUserToAddRows = false;
+				dgvHistorial.AllowUserToDeleteRows = false;
+				dgvHistorial.ReadOnly = true;
+				dgvHistorial.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+				dgvHistorial.BackgroundColor = Color.White;
+				dgvHistorial.GridColor = Color.LightGray;
+				dgvHistorial.ColumnHeadersDefaultCellStyle.BackColor = Color.DodgerBlue;
+				dgvHistorial.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+				dgvHistorial.ColumnHeadersDefaultCellStyle.Font = new Font(dgvHistorial.Font, FontStyle.Bold);
+				dgvHistorial.ColumnHeadersHeight = 30;
+				dgvHistorial.RowTemplate.Height = 25;
+
+				dgvHistorial.AlternatingRowsDefaultCellStyle.BackColor = Color.AliceBlue;
+
+				dgvHistorial.MouseMove += (s, e) =>
+				{
+					var hit = dgvHistorial.HitTest(e.X, e.Y);
+					if (hit.RowIndex >= 0 && hit.Type == DataGridViewHitTestType.Cell)
+					{
+						if (dgvHistorial.CurrentRow != null)
+							dgvHistorial.CurrentRow.DefaultCellStyle.BackColor = Color.LightSteelBlue;
+					}
+				};
+			}
+			catch { }
+		}
+
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				gestor?.Dispose();
+				components?.Dispose();
+			}
+			base.Dispose(disposing);
+		}
+	}
+}
+
+

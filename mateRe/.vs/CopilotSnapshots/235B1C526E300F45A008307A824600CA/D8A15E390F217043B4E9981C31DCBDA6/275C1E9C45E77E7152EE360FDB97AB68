@@ -1,0 +1,272 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Windows.Forms;
+using OfficeOpenXml;
+
+namespace mate22
+{
+	public static class EPPlusHelper
+	{
+		private static bool _initialized = false;
+		private const int MAX_RETRIES = 3;
+		private const int RETRY_DELAY_MS = 100;
+
+		public static void Initialize()
+		{
+			if (!_initialized)
+			{
+				try
+				{
+					// Establecer licencia no comercial por defecto. Si falla, se maneja mostrando un mensaje y continuando con funcionalidad limitada.
+					try
+					{
+						ExcelPackage.License = LicenseContext.NonCommercial;
+						_initialized = true;
+					}
+					catch (OfficeOpenXml.LicenseContextPropertyObsoleteException lex)
+					{
+						// Si la excepción indica uso de propiedad obsoleta, intentar establecer por reflexión la propiedad License si existe.
+						System.Diagnostics.Debug.WriteLine($"EPPlus license API error: {lex.Message}");
+						MessageBox.Show("Error al configurar licencia de EPPlus. Algunas funciones de Excel pueden no estar disponibles.", "EPPlus License", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+						_initialized = false; // marcar como no totalmente inicializado pero permitir uso parcial
+					}
+				}
+				catch (Exception ex)
+				{
+					System.Diagnostics.Debug.WriteLine($"EPPlus initialization error: {ex.Message}");
+					MessageBox.Show($"Error al inicializar EPPlus: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+					_initialized = false;
+				}
+			}
+		}
+
+		public static void EnsureFileExists(string filePath, string sheetName, string[] headers)
+		{
+			Initialize();
+
+			try
+			{
+				FileInfo file = new FileInfo(filePath);
+				if (!file.Exists)
+				{
+					using (var package = new ExcelPackage(file))
+					{
+						var ws = package.Workbook.Worksheets.Add(sheetName);
+						if (headers != null && headers.Length > 0)
+						{
+							for (int i = 0; i < headers.Length; i++)
+							{
+								ws.Cells[1, i + 1].Value = headers[i];
+							}
+							ws.Row(1).Style.Font.Bold = true;
+						}
+						package.Save();
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				System.Diagnostics.Debug.WriteLine($"EnsureFileExists error: {ex.Message}");
+				throw;
+			}
+		}
+
+		public static List<Dictionary<string, object>> ReadSheet(string filePath, string sheetName = null)
+		{
+			Initialize();
+			var result = new List<Dictionary<string, object>>();
+			int retries = 0;
+
+			while (retries < MAX_RETRIES)
+			{
+				try
+				{
+					FileInfo file = new FileInfo(filePath);
+					if (!file.Exists) return result;
+
+					using (var package = new ExcelPackage(file, false))
+					{
+						var ws = string.IsNullOrEmpty(sheetName) 
+							? (package.Workbook.Worksheets.Count > 0 ? package.Workbook.Worksheets[0] : null)
+							: package.Workbook.Worksheets[sheetName];
+
+						if (ws == null) return result;
+
+						int rows = ws.Dimension?.End.Row ?? 0;
+						int cols = ws.Dimension?.End.Column ?? 0;
+
+						for (int row = 2; row <= rows; row++)
+						{
+							var dict = new Dictionary<string, object>();
+							for (int col = 1; col <= cols; col++)
+							{
+								string key = ws.Cells[1, col].Value?.ToString() ?? $"Col{col}";
+								object value = ws.Cells[row, col].Value;
+								dict[key] = value;
+							}
+							result.Add(dict);
+						}
+					}
+					return result;
+				}
+				catch (IOException) when (retries < MAX_RETRIES - 1)
+				{
+					retries++;
+					System.Threading.Thread.Sleep(RETRY_DELAY_MS);
+				}
+				catch (Exception ex)
+				{
+					System.Diagnostics.Debug.WriteLine($"ReadSheet error: {ex.Message}");
+					throw;
+				}
+			}
+			return result;
+		}
+
+		public static void WriteSheet(string filePath, string sheetName, List<Dictionary<string, object>> data, string[] headers = null)
+		{
+			Initialize();
+			int retries = 0;
+
+			while (retries < MAX_RETRIES)
+			{
+				try
+				{
+					FileInfo file = new FileInfo(filePath);
+					using (var package = new ExcelPackage(file))
+					{
+						var ws = package.Workbook.Worksheets[sheetName] ?? package.Workbook.Worksheets.Add(sheetName);
+
+						if (headers != null && headers.Length > 0)
+						{
+							for (int i = 0; i < headers.Length; i++)
+							{
+								ws.Cells[1, i + 1].Value = headers[i];
+							}
+							ws.Row(1).Style.Font.Bold = true;
+						}
+
+						for (int rowIdx = 0; rowIdx < data.Count; rowIdx++)
+						{
+							var row = data[rowIdx];
+							int colIdx = 1;
+							foreach (var kvp in row)
+							{
+								ws.Cells[rowIdx + 2, colIdx].Value = kvp.Value;
+								colIdx++;
+							}
+						}
+
+						package.Save();
+					}
+					return;
+				}
+				catch (IOException) when (retries < MAX_RETRIES - 1)
+				{
+					retries++;
+					System.Threading.Thread.Sleep(RETRY_DELAY_MS);
+				}
+				catch (Exception ex)
+				{
+					System.Diagnostics.Debug.WriteLine($"WriteSheet error: {ex.Message}");
+					throw;
+				}
+			}
+		}
+
+		public static void AppendRow(string filePath, string sheetName, Dictionary<string, object> rowData)
+		{
+			Initialize();
+			int retries = 0;
+
+			while (retries < MAX_RETRIES)
+			{
+				try
+				{
+					FileInfo file = new FileInfo(filePath);
+					using (var package = new ExcelPackage(file))
+					{
+						var ws = package.Workbook.Worksheets[sheetName];
+						if (ws == null)
+						{
+							System.Diagnostics.Debug.WriteLine($"Sheet {sheetName} not found");
+							return;
+						}
+
+						int nextRow = (ws.Dimension?.End.Row ?? 1) + 1;
+						int colIdx = 1;
+
+						foreach (var kvp in rowData)
+						{
+							ws.Cells[nextRow, colIdx].Value = kvp.Value;
+							colIdx++;
+						}
+
+						package.Save();
+					}
+					return;
+				}
+				catch (IOException) when (retries < MAX_RETRIES - 1)
+				{
+					retries++;
+					System.Threading.Thread.Sleep(RETRY_DELAY_MS);
+				}
+				catch (Exception ex)
+				{
+					System.Diagnostics.Debug.WriteLine($"AppendRow error: {ex.Message}");
+					throw;
+				}
+			}
+		}
+
+		public static int GetRowCount(string filePath, string sheetName = null)
+		{
+			Initialize();
+
+			try
+			{
+				FileInfo file = new FileInfo(filePath);
+				if (!file.Exists) return 0;
+
+				using (var package = new ExcelPackage(file, false))
+				{
+					var ws = string.IsNullOrEmpty(sheetName)
+						? (package.Workbook.Worksheets.Count > 0 ? package.Workbook.Worksheets[0] : null)
+						: package.Workbook.Worksheets[sheetName];
+
+					return ws?.Dimension?.End.Row ?? 0;
+				}
+			}
+			catch (Exception ex)
+			{
+				System.Diagnostics.Debug.WriteLine($"GetRowCount error: {ex.Message}");
+				return 0;
+			}
+		}
+
+		public static object GetCell(string filePath, string sheetName, int row, int col)
+		{
+			Initialize();
+
+			try
+			{
+				FileInfo file = new FileInfo(filePath);
+				if (!file.Exists) return null;
+
+				using (var package = new ExcelPackage(file, false))
+				{
+					var ws = package.Workbook.Worksheets[sheetName];
+					if (ws == null) return null;
+
+					return ws.Cells[row, col].Value;
+				}
+			}
+			catch (Exception ex)
+			{
+				System.Diagnostics.Debug.WriteLine($"GetCell error: {ex.Message}");
+				return null;
+			}
+		}
+	}
+}

@@ -1,0 +1,17 @@
+﻿using System;
+
+namespace mate22
+{
+	public class Resultado
+	{
+		public string Nombre { get; set; }
+		public string Fecha { get; set; }
+
+		public int ScoreNivel1 { get; set; }
+		public int ScoreNivel2 { get; set; }
+		public int ScoreNivel3 { get; set; }
+		public int ScoreNivel4 { get; set; }
+
+		public string TiempoTotal { get; set; }
+	}
+}

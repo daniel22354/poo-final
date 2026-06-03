@@ -1,0 +1,298 @@
+using System;
+using System.IO;
+using System.Windows.Forms;
+using OfficeOpenXml;
+
+namespace mate22
+{
+	public class FormLoginExcel : Form
+	{
+		private string rutaExcel;
+		private TextBox txtRegUsuario;
+		private TextBox txtRegContra;
+		private Button btnRegistrar;
+		private TextBox txtLoginUsuario;
+		private TextBox txtLoginContra;
+		private Label lblReg;
+		private Label lblRUser;
+		private Label lblRPass;
+		private Label lblLogin;
+		private Label lblLUser;
+		private Label lblLPass;
+		private Button btnLogin;
+
+		public FormLoginExcel()
+			{
+				InitializeComponent();
+
+				string docPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+				string p1 = Path.Combine(docPath, "usuarios.xlsx");
+				string p2 = Path.Combine(docPath, "usuarios1.xlsx");
+				try
+				{
+					if (File.Exists(p1)) rutaExcel = p1;
+					else if (File.Exists(p2)) rutaExcel = p2;
+					else
+					{
+						rutaExcel = p2;
+						EnsureExcelFileExists(rutaExcel);
+					}
+				}
+				catch (UnauthorizedAccessException)
+				{
+					string startup = Application.StartupPath;
+					rutaExcel = Path.Combine(startup, "usuarios1.xlsx");
+					try { EnsureExcelFileExists(rutaExcel); } catch { }
+				}
+				catch
+				{
+					string startup = Application.StartupPath;
+					rutaExcel = Path.Combine(startup, "usuarios1.xlsx");
+					try { EnsureExcelFileExists(rutaExcel); } catch { }
+				}
+			}
+
+		private void InitializeComponent()
+		{
+			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FormLoginExcel));
+			lblReg = new Label();
+			lblRUser = new Label();
+			txtRegUsuario = new TextBox();
+			lblRPass = new Label();
+			txtRegContra = new TextBox();
+			btnRegistrar = new Button();
+			lblLogin = new Label();
+			lblLUser = new Label();
+			txtLoginUsuario = new TextBox();
+			lblLPass = new Label();
+			txtLoginContra = new TextBox();
+			btnLogin = new Button();
+			SuspendLayout();
+			// 
+			// lblReg
+			// 
+			lblReg.Location = new Point(0, 0);
+			lblReg.Name = "lblReg";
+			lblReg.Size = new Size(100, 23);
+			lblReg.TabIndex = 0;
+			// 
+			// lblRUser
+			// 
+			lblRUser.Location = new Point(0, 0);
+			lblRUser.Name = "lblRUser";
+			lblRUser.Size = new Size(100, 23);
+			lblRUser.TabIndex = 1;
+			// 
+			// txtRegUsuario
+			// 
+			txtRegUsuario.Location = new Point(0, 0);
+			txtRegUsuario.Name = "txtRegUsuario";
+			txtRegUsuario.Size = new Size(100, 27);
+			txtRegUsuario.TabIndex = 2;
+			// 
+			// lblRPass
+			// 
+			lblRPass.Location = new Point(0, 0);
+			lblRPass.Name = "lblRPass";
+			lblRPass.Size = new Size(100, 23);
+			lblRPass.TabIndex = 3;
+			// 
+			// txtRegContra
+			// 
+			txtRegContra.Location = new Point(0, 0);
+			txtRegContra.Name = "txtRegContra";
+			txtRegContra.Size = new Size(100, 27);
+			txtRegContra.TabIndex = 4;
+			// 
+			// btnRegistrar
+			// 
+			btnRegistrar.Location = new Point(0, 0);
+			btnRegistrar.Name = "btnRegistrar";
+			btnRegistrar.Size = new Size(75, 23);
+			btnRegistrar.TabIndex = 5;
+			btnRegistrar.Click += btnRegistrar_Click;
+			// 
+			// lblLogin
+			// 
+			lblLogin.Location = new Point(0, 0);
+			lblLogin.Name = "lblLogin";
+			lblLogin.Size = new Size(100, 23);
+			lblLogin.TabIndex = 6;
+			// 
+			// lblLUser
+			// 
+			lblLUser.Location = new Point(0, 0);
+			lblLUser.Name = "lblLUser";
+			lblLUser.Size = new Size(100, 23);
+			lblLUser.TabIndex = 7;
+			// 
+			// txtLoginUsuario
+			// 
+			txtLoginUsuario.Location = new Point(0, 0);
+			txtLoginUsuario.Name = "txtLoginUsuario";
+			txtLoginUsuario.Size = new Size(100, 27);
+			txtLoginUsuario.TabIndex = 8;
+			// 
+			// lblLPass
+			// 
+			lblLPass.Location = new Point(0, 0);
+			lblLPass.Name = "lblLPass";
+			lblLPass.Size = new Size(100, 23);
+			lblLPass.TabIndex = 9;
+			// 
+			// txtLoginContra
+			// 
+			txtLoginContra.Location = new Point(0, 0);
+			txtLoginContra.Name = "txtLoginContra";
+			txtLoginContra.Size = new Size(100, 27);
+			txtLoginContra.TabIndex = 10;
+			// 
+			// btnLogin
+			// 
+			btnLogin.Location = new Point(0, 0);
+			btnLogin.Name = "btnLogin";
+			btnLogin.Size = new Size(75, 23);
+			btnLogin.TabIndex = 11;
+			btnLogin.Click += btnLogin_Click;
+			// 
+					// FormLoginExcel
+					// 
+					ClientSize = new Size(520, 220);
+					Controls.Add(lblReg);
+					Controls.Add(lblRUser);
+					Controls.Add(txtRegUsuario);
+					Controls.Add(lblRPass);
+					Controls.Add(txtRegContra);
+					Controls.Add(btnRegistrar);
+					Controls.Add(lblLogin);
+					Controls.Add(lblLUser);
+					Controls.Add(txtLoginUsuario);
+					Controls.Add(lblLPass);
+					Controls.Add(txtLoginContra);
+					Controls.Add(btnLogin);
+					FormBorderStyle = FormBorderStyle.FixedDialog;
+					Icon = (Icon)resources.GetObject("$this.Icon");
+					MaximizeBox = false;
+					Name = "FormLoginExcel";
+					Text = "Login - Registro (Excel)";
+					ResumeLayout(false);
+					PerformLayout();
+		}
+
+		private void EnsureExcelFileExists(string path)
+			{
+				try
+				{
+					EPPlusHelper.EnsureFileExists(path, "Usuarios", new[] { "Usuario", "Contraseña", "Nivel", "Puntaje" });
+				}
+				catch (Exception ex)
+				{
+					System.Diagnostics.Debug.WriteLine($"Error al crear archivo Excel: {ex.Message}");
+				}
+			}
+
+		private void btnRegistrar_Click(object sender, EventArgs e)
+			{
+				string usuario = txtRegUsuario.Text.Trim();
+				string contra = txtRegContra.Text.Trim();
+
+				if (string.IsNullOrEmpty(usuario) || string.IsNullOrEmpty(contra))
+				{
+					MessageBox.Show("Por favor, llena todos los campos.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+					return;
+				}
+
+				try
+				{
+					var data = EPPlusHelper.ReadSheet(rutaExcel, "Usuarios");
+					foreach (var row in data)
+					{
+						if (row.ContainsKey("Usuario") && row["Usuario"]?.ToString() == usuario)
+						{
+							MessageBox.Show("El usuario ya existe. Intenta con otro.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+							return;
+						}
+					}
+
+					var newRow = new Dictionary<string, object>
+					{
+						{ "Usuario", usuario },
+						{ "Contraseña", contra },
+						{ "Nivel", 1 },
+						{ "Puntaje", 0 }
+					};
+
+					EPPlusHelper.AppendRow(rutaExcel, "Usuarios", newRow);
+
+					MessageBox.Show("¡Usuario registrado con éxito!", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+					try
+					{
+						var existing = UserStore.GetUser(usuario);
+						if (existing == null)
+						{
+							var newUser = new UserData { Username = usuario, PasswordHash = UserStore.HashPassword(contra), NivelMaximo = 1, AciertosTotales = 0, ErroresTotales = 0, Score = 0 };
+							UserStore.AddOrUpdateUser(newUser);
+						}
+					}
+					catch { }
+
+					txtRegUsuario.Clear();
+					txtRegContra.Clear();
+				}
+				catch (Exception ex)
+			{
+				MessageBox.Show($"Error al registrar: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
+		private void btnLogin_Click(object sender, EventArgs e)
+		{
+			string usuario = txtLoginUsuario.Text.Trim();
+			string contra = txtLoginContra.Text.Trim();
+
+			if (string.IsNullOrEmpty(usuario) || string.IsNullOrEmpty(contra))
+			{
+				MessageBox.Show("Rellena usuario y contraseña.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				return;
+			}
+
+			try
+			{
+				var data = EPPlusHelper.ReadSheet(rutaExcel, "Usuarios");
+				foreach (var row in data)
+				{
+					string userExcel = row.ContainsKey("Usuario") ? row["Usuario"]?.ToString() : null;
+					string passExcel = row.ContainsKey("Contraseña") ? row["Contraseña"]?.ToString() : null;
+
+					if (userExcel == usuario && passExcel == contra)
+					{
+						int nivelGuardado = 1;
+						int puntajeGuardado = 0;
+
+						if (row.ContainsKey("Nivel") && int.TryParse(row["Nivel"]?.ToString(), out int nivel))
+							nivelGuardado = nivel;
+						if (row.ContainsKey("Puntaje") && int.TryParse(row["Puntaje"]?.ToString(), out int puntaje))
+							puntajeGuardado = puntaje;
+
+						MessageBox.Show($"¡Bienvenido {usuario}! Nivel: {nivelGuardado}, Puntaje: {puntajeGuardado}", "Login Exitoso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+						var f = new Form1();
+						f.CurrentUsername = usuario;
+						f.nivelMaximoDesbloqueado = nivelGuardado;
+						f.CargarProgreso();
+						this.Hide();
+						f.ShowDialog();
+						this.Close();
+						return;
+					}
+				}
+				MessageBox.Show("Usuario o contraseña incorrectos.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show($"Error al iniciar sesión: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+	}
+}

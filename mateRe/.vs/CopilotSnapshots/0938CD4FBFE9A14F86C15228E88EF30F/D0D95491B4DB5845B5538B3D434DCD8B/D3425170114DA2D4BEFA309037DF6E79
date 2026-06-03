@@ -1,0 +1,248 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+
+namespace mate22
+{
+	/// <summary>
+	/// Gestor de resultados que implementa IResultadoGestor y hereda de GestorBase
+	/// Demuestra herencia de clases, implementación de interfaces, excepciones personalizadas
+	/// y sobrecarga de métodos
+	/// </summary>
+	public class GestorResultados : GestorBase, IResultadoGestor
+	{
+		private static string archivo = "historial.json";
+		private List<Resultado> cache;
+
+		public GestorResultados() : base(archivo)
+		{
+			Inicializar();
+		}
+
+		public GestorResultados(string rutaPersonalizada) : base(rutaPersonalizada)
+		{
+			archivo = rutaPersonalizada;
+			Inicializar();
+		}
+
+		public override void Inicializar()
+		{
+			cache = new List<Resultado>();
+			try
+			{
+				if (File.Exists(archivo))
+				{
+					string json = File.ReadAllText(archivo);
+					cache = JsonSerializer.Deserialize<List<Resultado>>(json) ?? new List<Resultado>();
+				}
+			}
+			catch (Exception ex)
+			{
+				throw new ResultadoException($"Error al inicializar el gestor desde {archivo}", ex)
+				{ CodigoError = ErrorCode.ArchivoNoValido };
+			}
+		}
+
+		/// <summary>
+		/// Sobrecarga 1: Guarda un resultado individual
+		/// </summary>
+		public void Guardar(Resultado resultado)
+		{
+			try
+			{
+				ValidarResultado(resultado);
+				cache.Add(resultado);
+				GuardarEnArchivo();
+			}
+			catch (ResultadoException)
+			{
+				throw;
+			}
+			catch (Exception ex)
+			{
+				throw new ResultadoException("Error al guardar el resultado", ex)
+				{ CodigoError = ErrorCode.ErrorGuardando };
+			}
+		}
+
+		/// <summary>
+		/// Sobrecarga 2: Guarda un resultado con información adicional
+		/// </summary>
+		public void Guardar(Resultado resultado, string usuario)
+		{
+			if (string.IsNullOrWhiteSpace(usuario))
+				throw new ResultadoException("Usuario no válido", null)
+				{ CodigoError = ErrorCode.UsuarioNoValido };
+
+			resultado.Nombre = usuario;
+			Guardar(resultado);
+		}
+
+		/// <summary>
+		/// Sobrecarga 3: Guarda múltiples resultados
+		/// </summary>
+		public void Guardar(List<Resultado> resultados)
+		{
+			if (resultados == null || resultados.Count == 0)
+				throw new ResultadoException("La lista de resultados no puede estar vacía", null)
+				{ CodigoError = ErrorCode.ResultadoInvalido };
+
+			foreach (var resultado in resultados)
+			{
+				ValidarResultado(resultado);
+				cache.Add(resultado);
+			}
+			GuardarEnArchivo();
+		}
+
+		/// <summary>
+		/// Obtiene todos los resultados
+		/// </summary>
+		public List<Resultado> ObtenerTodos()
+		{
+			return new List<Resultado>(cache);
+		}
+
+		/// <summary>
+		/// Sobrecarga 1: Obtiene resultados de un usuario específico
+		/// </summary>
+		public List<Resultado> ObtenerPorUsuario(string usuario)
+		{
+			if (string.IsNullOrWhiteSpace(usuario))
+				throw new ResultadoException("Usuario no válido", null)
+				{ CodigoError = ErrorCode.UsuarioNoValido };
+
+			return cache.Where(r => r.Nombre.Equals(usuario, StringComparison.OrdinalIgnoreCase))
+				.OrderByDescending(r => r.Fecha)
+				.ToList();
+		}
+
+		/// <summary>
+		/// Obtiene resultados ordenados y filtrados por usuario con límite
+		/// </summary>
+		public List<Resultado> ObtenerPorUsuario(string usuario, int limite)
+		{
+			var resultados = ObtenerPorUsuario(usuario);
+			return resultados.Take(limite).ToList();
+		}
+
+		/// <summary>
+		/// Sobrecarga 2: Obtiene resultados de una fecha específica
+		/// </summary>
+		public List<Resultado> ObtenerPorFecha(DateTime fecha)
+		{
+			string fechaStr = fecha.ToString("dd/MM/yyyy");
+			return cache.Where(r => r.Fecha.StartsWith(fechaStr))
+				.OrderByDescending(r => r.Fecha)
+				.ToList();
+		}
+
+		/// <summary>
+		/// Sobrecarga 3: Obtiene resultados dentro de un rango de fechas
+		/// </summary>
+		public List<Resultado> ObtenerPorRangoFechas(DateTime fechaInicio, DateTime fechaFin)
+		{
+			if (fechaInicio > fechaFin)
+				throw new ResultadoException("La fecha de inicio debe ser menor o igual a la fecha fin", null)
+				{ CodigoError = ErrorCode.ResultadoInvalido };
+
+			return cache.Where(r => 
+			{
+				if (DateTime.TryParse(r.Fecha, out DateTime fecha))
+				{
+					return fecha >= fechaInicio && fecha <= fechaFin;
+				}
+				return false;
+			})
+			.OrderByDescending(r => r.Fecha)
+			.ToList();
+		}
+
+		/// <summary>
+		/// Obtiene el promedio de scores para un usuario
+		/// </summary>
+		public double ObtenerPromedioScores(string usuario)
+		{
+			var resultados = ObtenerPorUsuario(usuario);
+			if (resultados.Count == 0)
+				throw new ResultadoException($"No hay resultados para el usuario {usuario}", null)
+				{ CodigoError = ErrorCode.ResultadoInvalido };
+
+			double promedio = resultados.Average(r => 
+				(r.ScoreNivel1 + r.ScoreNivel2 + r.ScoreNivel3 + r.ScoreNivel4) / 4.0);
+
+			return Math.Round(promedio, 2);
+		}
+
+		/// <summary>
+		/// Elimina todos los resultados de un usuario
+		/// </summary>
+		public void EliminarPorUsuario(string usuario)
+		{
+			if (string.IsNullOrWhiteSpace(usuario))
+				throw new ResultadoException("Usuario no válido", null)
+				{ CodigoError = ErrorCode.UsuarioNoValido };
+
+			int countAntes = cache.Count;
+			cache = cache.Where(r => !r.Nombre.Equals(usuario, StringComparison.OrdinalIgnoreCase))
+				.ToList();
+
+			if (cache.Count < countAntes)
+			{
+				GuardarEnArchivo();
+			}
+		}
+
+		/// <summary>
+		/// Obtiene estadísticas generales del sistema
+		/// </summary>
+		public Dictionary<string, object> ObtenerEstadisticas()
+		{
+			var stats = new Dictionary<string, object>
+			{
+				{ "TotalResultados", cache.Count },
+				{ "UsuariosUnicos", cache.Select(r => r.Nombre).Distinct().Count() },
+				{ "PromedioScoreSistema", cache.Count > 0 ? 
+					Math.Round(cache.Average(r => (r.ScoreNivel1 + r.ScoreNivel2 + r.ScoreNivel3 + r.ScoreNivel4) / 4.0), 2) 
+					: 0 },
+				{ "ScoreMaximo", cache.Count > 0 ? 
+					cache.Max(r => Math.Max(Math.Max(r.ScoreNivel1, r.ScoreNivel2), Math.Max(r.ScoreNivel3, r.ScoreNivel4)))
+					: 0 },
+				{ "FechaUltimoRegistro", cache.Count > 0 ? cache.OrderByDescending(r => r.Fecha).First().Fecha : "N/A" }
+			};
+
+			return stats;
+		}
+
+		private void GuardarEnArchivo()
+		{
+			try
+			{
+				string json = JsonSerializer.Serialize(
+					cache,
+					new JsonSerializerOptions { WriteIndented = true });
+
+				File.WriteAllText(archivo, json);
+			}
+			catch (Exception ex)
+			{
+				throw new ResultadoException($"Error al guardar en archivo {archivo}", ex)
+				{ CodigoError = ErrorCode.ErrorGuardando };
+			}
+		}
+
+		protected override void Dispose(bool disposing)
+		{
+			if (!disposed)
+			{
+				if (disposing)
+				{
+					cache?.Clear();
+				}
+				base.Dispose(disposing);
+			}
+		}
+	}
+}

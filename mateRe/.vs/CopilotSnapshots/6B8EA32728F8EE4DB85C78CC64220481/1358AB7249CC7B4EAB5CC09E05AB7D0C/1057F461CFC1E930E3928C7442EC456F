@@ -1,0 +1,142 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Text;
+using System.Windows.Forms;
+using System.IO;
+using OfficeOpenXml;
+
+namespace mate22
+{
+	public partial class registro : Form
+	{
+		public registro()
+		{
+			InitializeComponent();
+		}
+
+		private void BtnRegister_Click(object sender, EventArgs e)
+		{
+			string username = textUser.Text.Trim();
+			string password = textPass.Text;
+			if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+			{
+				MessageBox.Show("Usuario y contraseña requeridos.");
+				return;
+			}
+			var existing = UserStore.GetUser(username);
+			if (existing != null)
+			{
+				MessageBox.Show("El usuario ya existe.");
+				return;
+			}
+			var user = new UserData { Username = username, PasswordHash = UserStore.HashPassword(password), NivelMaximo = 1, AciertosTotales = 0, ErroresTotales = 0, Score = 100 };
+			UserStore.AddOrUpdateUser(user);
+			try
+			{
+				OfficeOpenXml.ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
+				string docPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "mate22");
+				if (!Directory.Exists(docPath)) Directory.CreateDirectory(docPath);
+				string excelFile = Path.Combine(docPath, "usuarios.xlsx");
+				FileInfo fi = new FileInfo(excelFile);
+				using (var p = new ExcelPackage(fi))
+				{
+					var ws = p.Workbook.Worksheets.Count > 0 ? p.Workbook.Worksheets[0] : p.Workbook.Worksheets.Add("Usuarios");
+					int row = (ws.Dimension?.End.Row ?? 0) + 1;
+					if (row == 1)
+					{
+						ws.Cells[1, 1].Value = "Usuario";
+						ws.Cells[1, 2].Value = "PasswordHash";
+						ws.Cells[1, 3].Value = "Nivel";
+						ws.Cells[1, 4].Value = "Score";
+						row = 2;
+					}
+					ws.Cells[row, 1].Value = user.Username;
+					ws.Cells[row, 2].Value = user.PasswordHash;
+					ws.Cells[row, 3].Value = user.NivelMaximo;
+					ws.Cells[row, 4].Value = user.Score;
+					p.Save();
+				}
+			}
+			catch (Exception ex) { MessageBox.Show("Advertencia: no se pudo actualizar archivo Excel: " + ex.Message, "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+			// Mostrar ruta de almacenamiento y confirmar guardado en UserStore
+			try { MessageBox.Show("Cuenta creada. Usuarios guardados en: " + UserStore.GetStoragePath(), "Registro", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch { MessageBox.Show("Cuenta creada.", "Registro", MessageBoxButtons.OK, MessageBoxIcon.Information); }
+
+			this.Hide();
+			Form1 f = new Form1();
+			f.CurrentUsername = username;
+			f.nivelMaximoDesbloqueado = user.NivelMaximo;
+			f.CargarProgreso();
+			f.ShowDialog();
+			this.Close();
+		}
+
+		private void BtnLogin_Click(object sender, EventArgs e)
+		{
+			string username = textUser.Text.Trim();
+			string password = textPass.Text;
+			if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+			{
+				MessageBox.Show("Usuario y contraseña requeridos.");
+				return;
+			}
+			var user = UserStore.GetUser(username);
+			if (user == null)
+			{
+				MessageBox.Show("Usuario no encontrado.");
+				return;
+			}
+			string hash = UserStore.HashPassword(password);
+			if (hash != user.PasswordHash)
+			{
+				MessageBox.Show("Contraseña incorrecta.");
+				return;
+			}
+
+			this.Hide();
+			Form1 f = new Form1();
+			// Pasar progreso al Form1 (cargar campos básicos)
+			f.nivelMaximoDesbloqueado = user.NivelMaximo;
+			f.CargarProgreso();
+			f.ShowDialog();
+			this.Close();
+		}
+
+		private void registro_Load(object sender, EventArgs e)
+		{
+		}
+
+		private void btnHistorial_Click(object sender, EventArgs e)
+		{
+			// Credenciales de ADMIN para ver historial
+			string usuarioAdmin = "profesor";
+			string contrasenaAdmin = "123456";
+
+			string usuarioIngresado = textUser.Text?.Trim() ?? string.Empty;
+			string contrasenaIngresada = textPass.Text ?? string.Empty;
+
+			if (!string.Equals(usuarioIngresado, usuarioAdmin, StringComparison.OrdinalIgnoreCase) ||
+				contrasenaIngresada != contrasenaAdmin)
+			{
+				// Mensaje genérico para evitar revelar credenciales o detalles sensibles
+				MessageBox.Show("Campos no válidos.", "Acceso Denegado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				return;
+			}
+
+			FormHistorial historial = new FormHistorial(true); // mostrar lista de usuarios solo para admin
+			historial.ShowDialog();
+		}
+
+		private void registro_Load_1(object sender, EventArgs e)
+		{
+
+		}
+
+		private void label3_Click(object sender, EventArgs e)
+		{
+
+		}
+	}
+}

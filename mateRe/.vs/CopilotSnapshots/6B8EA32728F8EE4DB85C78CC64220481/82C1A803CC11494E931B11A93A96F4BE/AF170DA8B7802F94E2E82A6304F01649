@@ -1,0 +1,159 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+
+namespace mate22
+{
+	public class UserData
+	{
+		public string Username { get; set; } = "";
+		public string PasswordHash { get; set; } = "";
+		public int NivelMaximo { get; set; } = 1;
+		public int AciertosTotales { get; set; } = 0;
+		public int ErroresTotales { get; set; } = 0;
+		public double Score { get; set; } = 0;
+	}
+
+	public static class UserStore
+	{
+		private static readonly object sync = new object();
+		private static Dictionary<string, UserData> users = new Dictionary<string, UserData>(StringComparer.OrdinalIgnoreCase);
+		private static readonly string filePath;
+
+		static UserStore()
+		{
+			// Preferir ApplicationData (roaming) para que funcione cuando se publique como .exe o se instale en Program Files
+			string appDir = null;
+			try
+			{
+				appDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "mateRe");
+				if (!Directory.Exists(appDir)) Directory.CreateDirectory(appDir);
+			}
+			catch { appDir = null; }
+
+			if (string.IsNullOrEmpty(appDir))
+			{
+				try
+				{
+					appDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "mateRe");
+					if (!Directory.Exists(appDir)) Directory.CreateDirectory(appDir);
+				}
+				catch { appDir = null; }
+			}
+
+			if (string.IsNullOrEmpty(appDir))
+			{
+				// último recurso: Documents (más probable que tenga permisos de escritura)
+				try
+				{
+					appDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "mate22");
+					if (!Directory.Exists(appDir)) Directory.CreateDirectory(appDir);
+				}
+				catch { appDir = Path.Combine(Path.GetTempPath(), "mateRe"); try { if (!Directory.Exists(appDir)) Directory.CreateDirectory(appDir); } catch { } }
+			}
+
+			filePath = Path.Combine(appDir, "users.json");
+			Load();
+		}
+
+		private static void Load()
+		{
+			try
+			{
+				if (File.Exists(filePath))
+				{
+					var json = File.ReadAllText(filePath);
+					var list = JsonSerializer.Deserialize<List<UserData>>(json);
+					if (list != null) users = list.ToDictionary(u => u.Username, StringComparer.OrdinalIgnoreCase);
+				}
+			}
+			catch { /* ignore load errors */ }
+		}
+
+		private static void Save()
+		{
+			try
+			{
+				lock (sync)
+				{
+					var list = users.Values.ToList();
+					var json = JsonSerializer.Serialize(list, new JsonSerializerOptions { WriteIndented = true });
+					File.WriteAllText(filePath, json);
+				}
+			}
+			catch { /* ignore save errors */ }
+		}
+
+		public static UserData? GetUser(string username)
+		{
+			if (string.IsNullOrEmpty(username)) return null;
+			users.TryGetValue(username, out var u);
+			return u == null ? null : new UserData
+			{
+				Username = u.Username,
+				PasswordHash = u.PasswordHash,
+				NivelMaximo = u.NivelMaximo,
+				AciertosTotales = u.AciertosTotales,
+				ErroresTotales = u.ErroresTotales,
+				Score = u.Score
+			};
+		}
+
+		public static void AddOrUpdateUser(UserData user)
+		{
+			if (user == null || string.IsNullOrEmpty(user.Username)) return;
+			users[user.Username] = new UserData
+			{
+				Username = user.Username,
+				PasswordHash = user.PasswordHash,
+				NivelMaximo = user.NivelMaximo,
+				AciertosTotales = user.AciertosTotales,
+				ErroresTotales = user.ErroresTotales,
+				Score = user.Score
+			};
+			Save();
+		}
+
+		public static string HashPassword(string password)
+		{
+			if (string.IsNullOrEmpty(password)) return string.Empty;
+			using var sha = SHA256.Create();
+			var bytes = Encoding.UTF8.GetBytes(password);
+			var hash = sha.ComputeHash(bytes);
+			return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+		}
+
+		public static void SaveUserProgress(string username, int nivelMaximo, int aciertos, int errores, double score)
+		{
+			if (string.IsNullOrEmpty(username)) return;
+			if (!users.TryGetValue(username, out var u))
+			{
+				u = new UserData { Username = username };
+				users[username] = u;
+			}
+			// actualizar campos conservando lo anterior
+			u.NivelMaximo = Math.Max(u.NivelMaximo, nivelMaximo);
+			u.AciertosTotales = aciertos; // almacenar el último o usar acumulado según necesidad
+			u.ErroresTotales = errores;
+			u.Score = score;
+			Save();
+		}
+
+		public static System.Collections.Generic.List<UserData> GetAllUsers()
+		{
+			return users.Values.Select(u => new UserData
+			{
+				Username = u.Username,
+				PasswordHash = u.PasswordHash,
+				NivelMaximo = u.NivelMaximo,
+				AciertosTotales = u.AciertosTotales,
+				ErroresTotales = u.ErroresTotales,
+				Score = u.Score
+			}).OrderBy(u => u.Username, StringComparer.OrdinalIgnoreCase).ToList();
+		}
+	}
+}
